@@ -1,0 +1,8 @@
+Here, you will find the scripts used to scrap the data.
+
+# Environment
+First, install the environment:
+
+# Scrap the bible
+
+# Scrap deftepulaar
