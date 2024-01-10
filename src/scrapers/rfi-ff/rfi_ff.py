@@ -6,11 +6,8 @@ from pathlib import Path
 import asyncio
 import sys
 import requests
-from urllib.parse import urlparse
 from uuid import uuid4
 from tqdm import tqdm
-import aiohttp
-import socket 
 
 # Selenium imports
 from selenium import webdriver
