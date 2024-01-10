@@ -21,22 +21,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 
 logger = logging.getLogger(__name__)
-DATA_MARKER = '__NEXT_DATA__'
-DATA_PATTERN = r'__NEXT_DATA__\s*?=\s*?({.*?});'
 headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
-
-class WaitUntilAttributeContains:
-    def __init__(self, locator, attr, value):
-        self._locator = locator
-        self._attribute = attr
-        self._attribute_value = value
-
-    def __call__(self, driver):
-        element = driver.find_element(*self._locator)
-        if self._attribute_value in element.get_attribute(self._attribute):
-            return element
-        else:
-            return False
 
 def _get_selenium_cookies(driver):
     driver_cookies = driver.get_cookies()
@@ -48,7 +33,6 @@ def _get_selenium_driver():
     driver = webdriver.Firefox()
     return driver
 
-
 def _download_audio(driver, audio_src, output_directory, filename):
     parsed_url = urlparse(audio_src)
     # Get filename
@@ -56,19 +40,16 @@ def _download_audio(driver, audio_src, output_directory, filename):
     data = requests.get(audio_src, cookies=_get_selenium_cookies(driver), headers=headers, stream=True)
     print("REUESTING FINISHED")
     if data.status_code == 200:
-        output_path = Path(output_directory) / f"{filename}.mp3"
-        with open(output_path, 'wb') as out_mp3:
+        output_path = Path(output_directory) / "audio"
+        output_path.mkdir(exist_ok=True, parents=True)
+        with open(output_path / f"{filename}.mp3", 'wb') as out_mp3:
             out_mp3.write(data.content)
-            return True, output_path
 
 def get_text(response):
     print(response)
 
 def download_data(urls, output_directory, skip_done):
     driver = _get_selenium_driver()
-
-    errors_audio = []
-    errors_text = []
     accepted = False
     for full_url in tqdm(urls):
         filename = str(uuid4())
@@ -82,10 +63,17 @@ def download_data(urls, output_directory, skip_done):
         # Download audio
         audio_player = driver.find_element(By.XPATH, '/html/body/audio')
         audio_src = audio_player.get_attribute('src')
-        print("DONWLOADING AUDIO...")
-        download_status, chapter_name = _download_audio(driver, audio_src, output_directory, filename)
-        print("DONWLOADING FINISHED")
+        _download_audio(driver, audio_src, output_directory, filename)
         text_element = driver.find_element(By.XPATH, "//p[@class='t-content__chapo']")
+        title_element = driver.find_element(By.XPATH, "//h1[@class='a-page-title']")
+        text_path = output_directory / "text"
+        text_path.mkdir(exist_ok=True, parents=True)
+        title_path = output_directory / "title"
+        title_path.mkdir(exist_ok=True, parents=True)
+        with open(text_path / f"{filename}.txt", "w") as output_text:
+            output_text.write(text_element.text)
+        with open(title_path / f"{filename}.title", "w") as output_text:
+            output_text.write(title_element.text)
 
 def get_bible_language_data(urls_file, output_directory, skip_done):
 
