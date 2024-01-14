@@ -1,3 +1,5 @@
 __pycache__
 data
-.DS_Store 
+creds
+push_to_bucket.json
+.DS_Store
