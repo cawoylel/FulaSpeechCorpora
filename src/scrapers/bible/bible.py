@@ -5,14 +5,13 @@ from scrapy import Spider, Request
 from scrapy.crawler import CrawlerProcess
 from icu_tokenizer import SentSplitter
 import yaml
-from bs4 import BeautifulSoup
 
 SPLITTER = SentSplitter("ff")
 
 class MySpider(Spider):
     name = "bible"
     output_folder = name
-    with open("extra/links.yml") as links_file:
+    with open("extra/bible_links.yml") as links_file:
         links = yaml.safe_load(links_file)
     languages, start_urls = zip(*links.items())
     codes = [url.split(".")[-1] for url in start_urls]
@@ -24,11 +23,15 @@ class MySpider(Spider):
             out_mp3.write(data.content)
             return True, Path(output_file).stem
 
-    def get_audio_page(self, url):
-        pass
+    def get_audio(self, audio_response, output_filename):
+        audio = audio_response.css("audio")
+        if "src" in audio.attrib:
+            audio = audio.attrib["src"]
+            self.download_audio(audio, f"{output_filename}.mp3")
 
     def parse(self, response):
         content_to_pass = {"ChapterContent_r___3KRx", "ChapterContent_label__R2PLt", "ChapterContent_note__YlDW0",
+                           "ChapterContent_r___3KRx ChapterContent_verse-clickable__WZ8OD",
                            "ChapterContent_fr__0KsID", "ChapterContent_body__O3qjr", "ft", "w"}
         title = response.css("h1::text")
         title = title.get()
@@ -41,11 +44,8 @@ class MySpider(Spider):
 
         with open(f"{output_folder}/{code}.books", "a+") as titles:
             titles.write(f"{book}\t{chapter}\t{title}\n")
-        audio = response.css("div.pli-1:nth-child(4) > div:nth-child(1) > audio:nth-child(1)")
-        if "src" in audio.attrib:
-            audio = audio.attrib["src"]
-            print(">>>>>>", audio)
-            self.download_audio(audio, f"{output_filename}.mp3")
+        audio_url = "audio-bible".join(response.url.rsplit("bible", 1))
+        yield Request(audio_url, cb_kwargs={"output_filename": output_filename}, callback=self.get_audio)
         with open(f"{output_filename}.txt", "w") as output_file:
             output_file.write(f"{title}\n")
             for content in response.css("div.ChapterContent_chapter__uvbXo div"):
